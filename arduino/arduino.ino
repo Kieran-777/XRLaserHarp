@@ -97,10 +97,10 @@ Serial.println("SELECT mode ACTIVE");
     // Ascending
     for (int beam = 0; beam < modeBeams; beam++) {
       beamBlock(beam, 1);
-      char selectedMode = readSerial();
-      if (selectedMode == 2){
+      char input = readSerial();
+      if (input == 2){
         Serial.println("piano mode selected");
-        pianoMode();
+        selectedMode = 2;      // Update the correct selectedMode variable
         break;
       }
     }
@@ -111,12 +111,16 @@ Serial.println("SELECT mode ACTIVE");
       char selectedMode = readSerial();
       if (selectedMode == 2){
         Serial.println("piano mode selected");
-        pianoMode();
+        selectedMode = 2;      // Update the correct selectedMode variable
         break;
       }
     }
 
+
   }
+          if (selectedMode == 2){
+        pianoMode();
+          }
 
 }
 
