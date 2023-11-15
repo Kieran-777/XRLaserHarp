@@ -2,7 +2,7 @@
 
 int LaserState = LOW;                      // The variable that stores the state of the laser beam.
 int LaserPin =  7;                        //  Tell the arduino that the laser is on pin 7
-int sensor = 8 ;                         //   Change this value to calibrate your harp's sensor
+int sensor = 4 ;                         //   Change this value to calibrate your harp's sensor
 int delayLaser = 5;                     //    If you increase this, the laser will be brighter, but the harp will be less fluid
 
 int delayMotor = 200;                     // This variable affects the speed, and fluidity of the harp.
@@ -26,7 +26,7 @@ void setup() {
 }
 
 
-void readSerial()
+char readSerial()
 {
   char touchSerial = Serial.read();
   if (touchSerial >= '0' && touchSerial <= '9') { // convert serial string to int
@@ -38,6 +38,9 @@ void readSerial()
 
 void beamBlock(int beam, int pol)
 {
+  Serial.print("beam - ");
+  Serial.println(beam);
+
 	digitalWrite(LaserPin, HIGH);               // Turn on the laser
 	delay(delayLaser);
 
@@ -66,9 +69,13 @@ void beamBlock(int beam, int pol)
 
 void calibrationMode()
 {
+  Serial.println("CALIBRATION mode ACTIVE");
   myStepper.setSpeed(stepSpeed);                 // Set stepper to standard speed
-  myStepper.step(50);                           //  Move stepper to center (1.8deg per step, so 50 brings to 90deg)
-  while (digitalRead(modeButtonPin)  == LOW){} //   Wait for the user to move the stepper into position
+  Serial.println("starting calibration");
+  myStepper.step(500);                           //  Move stepper to center (1.8deg per step, so 50 brings to 90deg)
+  Serial.println("x steps taken");
+  while (digitalRead(modeButtonPin)  == HIGH){} //   Wait for the user to move the stepper into position
+  Serial.println("Calibration Complete!");
   selectMode();                               //    With the calibration complete we move onto select mode
 }
 
@@ -80,32 +87,32 @@ void calibrationMode()
 
 void selectMode()
 {
-  const int modeBeams = 8;    // number of beams in mode
-  int selectedMode = 0;       // var for mode select
+Serial.println("SELECT mode ACTIVE");
 
-  while (selectedMode == 0){          // until they select a mode
+  const int modeBeams = 8;    // number of beams in mode
+  int selectedMode = 1;       // var for mode select
+
+  while (selectedMode == 1){          // until they select a mode
 
     // Ascending
     for (int beam = 0; beam < modeBeams; beam++) {
       beamBlock(beam, 1);
-      char touchSerial = Serial.read();
-      if (touchSerial >= '0' && touchSerial <= '9') { // convert serial string to int
-        touchCommand = touchSerial - '0';
-      }
-      if (touchCommand == 3){
+      char selectedMode = readSerial();
+      if (selectedMode == 2){
+        Serial.println("piano mode selected");
         pianoMode();
+        break;
       }
     }
 
     // Descending
         for (int beam = modeBeams - 1; beam >= 0; beam--) {
-      beamBlock(beam, 1);
-      char touchSerial = Serial.read();
-      if (touchSerial >= '0' && touchSerial <= '9') { // convert serial string to int
-        touchCommand = touchSerial - '0';
-      }
-      if (touchCommand == 3){
+      beamBlock(beam, -1);
+      char selectedMode = readSerial();
+      if (selectedMode == 2){
+        Serial.println("piano mode selected");
         pianoMode();
+        break;
       }
     }
 
@@ -122,17 +129,24 @@ void selectMode()
 
 void pianoMode()
 {
+Serial.println("PIANO mode ACTIVE");
+
   const int modeBeams = 8;
-  while (digitalRead(modeButtonPin) == LOW){          // until the mode button is pressed
 
-  // Ascending
-  for (int beam = 0; beam < modeBeams; beam++) {
-    beamBlock(beam, 1)
+  bool buttonPressed = false;
+
+  while (!buttonPressed){          // until the mode button is pressed
+
+    // Ascending
+    for (int beam = 0; beam < modeBeams; beam++) {
+      beamBlock(beam, 1);
+      if (digitalRead(modeButtonPin) == LOW) { // Assuming LOW means button pressed
+        buttonPressed = true;
+        break; // Break out of the for loop
+      }
+    }
   }
-
-  
-
-  }
+  selectMode();
 
 }
 
@@ -144,20 +158,33 @@ void pianoMode()
 
 void loop() 
 {
+  modeState = digitalRead(modeButtonPin);
 
-  // Check if there's any Serial input
-  if (Serial.available() > 0) {
-    char touchSerial = Serial.read();
-    if (touchSerial >= '0' && touchSerial <= '9') { // convert serial string to int
-      touchCommand = touchSerial - '0';
-    }
+    if (modeState == LOW) {
+    // turn LED on:
+    digitalWrite(13, HIGH);
+  } else {
+    // turn LED off:
+    digitalWrite(13, LOW);
   }
+
+  // // Check if there's any Serial input
+  // if (Serial.available() > 0) {
+  //   char touchSerial = Serial.read();
+  //   if (touchSerial >= '0' && touchSerial <= '9') { // convert serial string to int
+  //     touchCommand = touchSerial - '0';
+  //   }
+  // }
+
+  Serial.println("###################");
+  Serial.println("#  XR-LASER-HARP  #");
+  Serial.println("###################");
 
   if (touchCommand == 0) {
     calibrationMode();
   }
-  else if (touchCommand == 1){
-    selectMode();
-  }
+  // else if (touchCommand == 1){
+  //   selectMode();
+  // }
 
 }
